@@ -1,9 +1,11 @@
 var WAVE_NUMBER = -1;
 var ORIGIN = null;
 var COVID_19_PANEL_MEMBER_AID = 32; // TODO, real attribute
-var WAVE_AIDS = [-1, 33, 34, 35, 36, 37, 38, 39, 44, 45, 46, 51, 52, 53]; // TODO, real attribute
+var WAVE_AIDS = [-1, 33, 34, 35, 36, 37, 38, 39, 44, 45, 46, 51, 52, 53];
 var GAME_OVER = false;
 var WAVES_COMPLETED = [];
+
+var QUALTRICS_DATA_LOADED = false;
 
 function receiveMessage(event) {
     console.log("EVENT RECEIVED");
@@ -22,6 +24,8 @@ function receiveMessage(event) {
         
         console.log("Wave is " + WAVE_NUMBER);
         fetchUserHT(function(data) {
+            QUALTRICS_DATA_LOADED = true;
+            console.log(data);
             // We got something back from the hash table
             if(myid in data && data[myid]["default"]) {
                 var collectedContactInfo = data[myid]["default"]["collected_contact_info"];
@@ -29,7 +33,7 @@ function receiveMessage(event) {
                 if(wavesCompleted) { // there is information on which waves have been completed
                     WAVES_COMPLETED = JSON.parse(wavesCompleted);
                     if(WAVES_COMPLETED.indexOf(WAVE_NUMBER) >= 0) {
-                        alert("You have already participated in Wave " + WAVE_NUMBER + ".");
+                        alert("You have already participated in Wave " + WAVE_NUMBER + ".  You are not eligible for this HIT.");
                         experimentComplete();
                         return;
                     }
@@ -71,8 +75,17 @@ function receiveMessage(event) {
     }
 }
 
+function amtPreview() {
+    $("#loading-spinner").hide();
+    $("#amt-preview").show();
+}
+
 function initialize() {
-    submit(window.location.href)
+    if(IS_AMT_PREVIEW) {
+        amtPreview();
+        return;
+    }
+    
     if(IS_AMT) {
         ORIGIN = "AMT";
     }
@@ -91,9 +104,14 @@ function initialize() {
     
     $("#survey_title").html(variables["title"]);
     window.addEventListener("message", receiveMessage, false);
+    setTimeout(function() {
+        if(!QUALTRICS_DATA_LOADED) {
+            console.log("Forcing the survey to start.");
+            startSurvey();
+        }
+    }, 5000);
     
-    $("#qualFrame").attr("src",variables["survey_link"]+"?USER_UID="+USER_UID+"&ORIGIN="+ORIGIN);
-    console.log(variables["survey_link"]+"?USER_UID="+USER_UID+"&ORIGIN="+ORIGIN);
+    $("#qualFrame").attr("src",variables["survey_link"]+"&USER_UID="+USER_UID+"&ORIGIN="+ORIGIN);
     $("#qualFrame").height(variables["survey_height"]);
 }
 
